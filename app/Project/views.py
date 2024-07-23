@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
-from app.models import Project, User
-
+from app.models.Project import Project
+from app.models.User import User
 from app.extensions import db
 
 project = Blueprint('project', __name__, template_folder='templates')
@@ -20,10 +20,11 @@ def create_project():
 
     return jsonify(project.to_dict()), 201
 
-@project.route('/api/projects/<int:project_id>', methods=['GET'])
-def get_project(project_id):
-    project = Project.query.get_or_404(project_id)
-    return jsonify(project.to_dict())
+@project.route('/api/projects', methods=['GET'])
+def get_project():
+    projects = Project.query.all()
+    project_list = [project.to_dict() for project in projects]
+    return jsonify(project_list)
 
 @project.route('/api/projects/<int:project_id>/users', methods=['POST'])
 def add_user_to_project(project_id):

@@ -11,33 +11,49 @@ user = Blueprint('user', __name__, template_folder='templates')
 
 @user.route('/api/users', methods=['GET'])
 def get_users():
-    year = request.args.get('year', type=int)
-    month = request.args.get('month', type=int)
+    start_query = request.args.get('start')
+    end_query = request.args.get('end')
     
+    start_query = start_query.split('.')[0]  # Удаляем миллисекунды
+    end_query = end_query.split('.')[0]
+    if start_query.endswith('Z'):
+        start_query = start_query[:-1]  # Удаляем суффикс 'Z'
+    if end_query.endswith('Z'):
+        end_query = end_query[:-1]  # Удаляем суффикс 'Z'
+    start_query = datetime.fromisoformat(start_query)
+    end_query = datetime.fromisoformat(end_query)
+
+
     # Получаем всех пользователей
     users = User.query.all()
-    
+
     # Фильтруем расписания по году и месяцу
     filtered_users = []
     for user in users:
         user_schedule = user.schedule
-        
-        if year is not None and month is not None:
-            start_date = datetime(year, month, 1)
-            # Определяем последний день месяца
-            next_month = month % 12 + 1
-            next_year = year + (month // 12)
-            end_date = datetime(next_year, next_month, 1)
-            
-            # Фильтруем расписания по дате
-            user_schedule = [s for s in user_schedule if start_date <= s.date < end_date]
-        
+
+        # Фильтруем расписания по дате
+        user_schedule = [s for s in user_schedule if start_query <= s.date < end_query]
+
         filtered_users.append({
+            'id': user.id,
             'name': user.name,
+            'prefix': user.prefix,
             'schedule': [s.to_dict() for s in user_schedule]
         })
 
     return jsonify(filtered_users)
+
+
+@user.route('/api/users_list', methods=['GET'])
+def get_users_list():
+    # Получаем всех пользователей
+    users = User.query.all()
+
+    # Формируем список с ID и именами пользователей
+    users_list = [{'id': user.id, 'name': user.name} for user in users]
+
+    return jsonify(users_list)
 
 
 @user.route('/api/users', methods=['POST'])
@@ -49,13 +65,14 @@ def add_users():
             
             # Извлекаем информацию о пользователе
             name = data.get('name')
+            prefix = data.get('prefix')        
 
             # Проверяем, что все необходимые данные присутствуют
             if not name:
                 return jsonify({'error': 'Все поля (name) обязательны'}), 400
 
             # Создаем нового пользователя
-            new_user = User(name=name)
+            new_user = User(name=name, prefix=prefix if prefix else None)
             
             # Добавляем пользователя в сессию
             db.session.add(new_user)
