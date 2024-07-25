@@ -41,3 +41,10 @@ class User(db.Model):
             'schedule': [s.to_dict() for s in self.schedule],
             'projects': [project.to_dict() for project in self.projects]
         }
+        
+    def to_project(self):
+        return {
+            'id': self.id,
+            'name': self.name, 
+            'prefix': self.prefix
+        }

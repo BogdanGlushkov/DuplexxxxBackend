@@ -26,16 +26,25 @@ def get_project():
     project_list = [project.to_dict() for project in projects]
     return jsonify(project_list)
 
-@project.route('/api/projects/<int:project_id>/users', methods=['POST'])
-def add_user_to_project(project_id):
+@project.route('/api/projects/<int:project_id>', methods=['PUT'])
+def update_project(project_id):
     data = request.json
-    user_id = data.get('user_id')
-    
     project = Project.query.get_or_404(project_id)
-    user = User.query.get_or_404(user_id)
-    
-    if user not in project.users:
-        project.users.append(user)
-        db.session.commit()
 
-    return jsonify(project.to_dict())
+    if 'name' in data:
+        project.name = data['name']
+    if 'cost' in data:
+        project.cost = data['cost']
+    if 'users' in data:
+        # Извлекаем только идентификаторы пользователей
+        user_ids = [user['id'] for user in data['users']]
+        project.users = User.query.filter(User.id.in_(user_ids)).all()
+
+    db.session.commit()
+
+    return jsonify({
+        'id': project.id,
+        'name': project.name,
+        'cost': project.cost,
+        'users': [{'id': user.id, 'name': user.name} for user in project.users]  # Возвращаем полный объект пользователя
+    })

@@ -34,12 +34,15 @@ def get_users():
 
         # Фильтруем расписания по дате
         user_schedule = [s for s in user_schedule if start_query <= s.date < end_query]
+        
+        projects = user.projects
 
         filtered_users.append({
             'id': user.id,
             'name': user.name,
             'prefix': user.prefix,
-            'schedule': [s.to_dict() for s in user_schedule]
+            'schedule': [s.to_dict() for s in user_schedule],
+            'projects': [{'id': project.id, 'name': project.name} for project in projects]
         })
 
     return jsonify(filtered_users)

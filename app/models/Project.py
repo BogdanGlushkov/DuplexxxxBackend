@@ -11,7 +11,7 @@ class Project(db.Model):
             'id': self.id,
             'name': self.name,
             'cost': self.cost,
-            'users': [user.to_dict() for user in self.users]
+            'users': [user.to_project() for user in self.users]
         }
 
 class ProjectUser(db.Model):
