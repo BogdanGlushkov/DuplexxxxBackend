@@ -105,8 +105,8 @@ def update_schedule(username):
         if not user:
             return jsonify({'error': 'Пользователь не найден'}), 404
 
-        # Получаем все существующие расписания пользователя
-        existing_schedules = Schedule.query.filter_by(user_id=user.id).all()
+        # # Получаем все существующие расписания пользователя
+        # existing_schedules = Schedule.query.filter_by(user_id=user.id).all()
 
         # Обрабатываем каждую запись из данных
         for item in data.get('schedule', []):
