@@ -31,8 +31,6 @@ def get_users():
             user = User.query.filter_by(id=acc.user_id).first()
             if user:
                 users.append(user)
-    print(users)
-
     # Фильтруем расписания по году и месяцу
     filtered_users = []
     for user in users:
