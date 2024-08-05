@@ -18,7 +18,7 @@ def login():
     password = data.get('password')
 
     user = UserAcc.query.filter_by(username=username).first()
-    if user and bcrypt.check_password_hash(user.password, password):
+    if user and bcrypt.check_password_hash(user.password, password) and user.isActive:
         # Создайте токен, включая имя пользователя
         token = create_access_token(identity=user.id, additional_claims={"username": user.username, "role": user.role.name})
         return jsonify({'token': token}), 200
@@ -37,13 +37,14 @@ def add_user():
     data = request.get_json()
     username = data['username']
     password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+    prefix = data['prefix']
     role_name = data.get('role', 'user')
     role = Role.query.filter_by(name=role_name).first()
     
     if UserAcc.query.filter_by(username=username).first():
         return jsonify({'message': 'User already exists'}), 400
 
-    new_user = UserAcc(username=username, password=password, role=role)
+    new_user = UserAcc(username=username, password=password, role=role, prefix=prefix)
     db.session.add(new_user)
     db.session.commit()
 
@@ -53,7 +54,7 @@ def add_user():
 @jwt_required()
 def get_users():
     users = UserAcc.query.all()
-    user_list = [{'id': user.id, 'username': user.username, 'role': user.role.name} for user in users]
+    user_list = [{'id': user.id, 'username': user.username, 'role': user.role.name, 'prefix': user.prefix, 'operator_id': user.user_id, "isActive": user.isActive} for user in users]
     return jsonify(user_list), 200
 
 @auth.route('/api/users_account/<int:user_id>', methods=['PUT'])
@@ -66,8 +67,12 @@ def update_user(user_id):
     
     user.username = data.get('username', user.username)
     if 'password' in data:
-        user.password = bcrypt.generate_password_hash(data['password'])  # Ensure to hash passwords
+        if data['password']:
+            user.password = bcrypt.generate_password_hash(data['password'])  # Ensure to hash passwords
     user.role_id = Role.query.filter_by(name=data.get('role')).first().id
+    user.prefix = data.get('prefix', user.prefix)
+    user.user_id = data.get('user', user.user_id)
+    user.isActive = data.get('is_active', user.isActive)
     
     db.session.commit()
     return jsonify({'message': 'User updated successfully'}), 200

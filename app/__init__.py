@@ -36,8 +36,8 @@ def create_app():
 
         # Проверьте наличие администратора
         if not UserAcc.query.filter_by(role_id=admin_role.id).first():
-            hashed_password = bcrypt.generate_password_hash('VeryHardPassword1').decode('utf-8')
-            admin_user = UserAcc(username='admin', prefix='admin', password=hashed_password, role_id=admin_role.id)
+            hashed_password = bcrypt.generate_password_hash('23e21980-b841-442f-bb24-5857914c911a').decode('utf-8')
+            admin_user = UserAcc(username='root', prefix='Администратор', password=hashed_password, role_id=admin_role.id)
             db.session.add(admin_user)
             db.session.commit()
     

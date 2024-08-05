@@ -48,3 +48,14 @@ def update_project(project_id):
         'cost': project.cost,
         'users': [{'id': user.id, 'name': user.name} for user in project.users]  # Возвращаем полный объект пользователя
     })
+    
+@project.route('/api/projects/<int:project_id>', methods=['DELETE'])
+def delete_project(project_id):
+    project = Project.query.get_or_404(project_id)
+    if project is None:
+        return jsonify({'error': 'Project not found'}), 404
+
+    db.session.delete(project)
+    db.session.commit()
+
+    return jsonify({'message': 'Project deleted successfully'}), 200

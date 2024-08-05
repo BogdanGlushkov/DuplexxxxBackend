@@ -15,6 +15,9 @@ class UserAcc(db.Model):
     prefix = db.Column(db.String(300))
     role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
     role = db.relationship('Role', backref=db.backref('Accounts', lazy=True))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    user = db.relationship('User', backref=db.backref('Accounts', lazy=True))
+    isActive = db.Column(db.Boolean, default=True)
     
     def __repr__(self):
         return f'<UserAcc {self.username}>'

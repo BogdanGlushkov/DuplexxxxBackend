@@ -30,14 +30,12 @@ class Schedule(db.Model):
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
-    prefix = db.Column(db.String(100))
     schedule = db.relationship('Schedule', backref='user', lazy=True)
 
     def to_dict(self):
         return {
             'id': self.id,
             'name': self.name,
-            'prefix': self.prefix,
             'schedule': [s.to_dict() for s in self.schedule],
             'projects': [project.to_dict() for project in self.projects]
         }
@@ -46,5 +44,4 @@ class User(db.Model):
         return {
             'id': self.id,
             'name': self.name, 
-            'prefix': self.prefix
         }

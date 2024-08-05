@@ -3,6 +3,7 @@ from datetime import datetime, time, timedelta, timezone
 import pandas as pd
 
 from app.models.User import User, Schedule
+from app.models.Auth import UserAcc
 from app.extensions import db
 import json
 
@@ -23,9 +24,14 @@ def get_users():
     start_query = datetime.fromisoformat(start_query)
     end_query = datetime.fromisoformat(end_query)
 
-
-    # Получаем всех пользователей
-    users = User.query.all()
+    active_accs = UserAcc.query.filter_by(isActive=True).all()
+    users = []
+    for acc in active_accs:
+        if acc.user_id:
+            user = User.query.filter_by(id=acc.user_id).first()
+            if user:
+                users.append(user)
+    print(users)
 
     # Фильтруем расписания по году и месяцу
     filtered_users = []
@@ -36,11 +42,12 @@ def get_users():
         user_schedule = [s for s in user_schedule if start_query <= s.date < end_query]
         
         projects = user.projects
+        
 
         filtered_users.append({
             'id': user.id,
             'name': user.name,
-            'prefix': user.prefix,
+            'prefix': UserAcc.query.filter_by(user_id=user.id).first().prefix,
             'schedule': [s.to_dict() for s in user_schedule],
             'projects': [{'id': project.id, 'name': project.name} for project in projects]
         })
@@ -67,15 +74,14 @@ def add_users():
             data = request.json
             
             # Извлекаем информацию о пользователе
-            name = data.get('name')
-            prefix = data.get('prefix')        
+            name = data.get('name')      
 
             # Проверяем, что все необходимые данные присутствуют
             if not name:
                 return jsonify({'error': 'Все поля (name) обязательны'}), 400
 
             # Создаем нового пользователя
-            new_user = User(name=name, prefix=prefix if prefix else None)
+            new_user = User(name=name)
             
             # Добавляем пользователя в сессию
             db.session.add(new_user)
@@ -152,71 +158,6 @@ def update_schedule(username):
         return jsonify({'error': 'Произошла ошибка при обновлении расписания'}), 500
 
 
-"""
-
-@user.route('/api/users', methods=['GET'])
-def get_users():
-    resourses = Users.query.all()
-    result = [resourse.to_json() for resourse in resourses]
-    return jsonify(result), 200
-
-@user.route('/api/schedule', methods=["GET"])
-def get_generate_schedule():
-    pass
-
-
-@user.route('api/add_schedule/<int:id>', methods=['POST'])
-def add_schedule():
-    if request.method == 'POST':
-        # Получаем данные из запроса
-        user_id = request.form.get('user_id')
-        color_id = request.form.get('color_id')
-        date = request.form.get('date')
-        start_time = request.form.get('start_time')
-        end_time = request.form.get('end_time')
-
-        # Проверяем наличие обязательных данных
-        if not (user_id and color_id and date and start_time and end_time):
-            return jsonify({'error': 'Не все данные были переданы'}), 400
-
-        try:
-            # Преобразуем время из строк в объекты time
-            start_time_obj = datetime.strptime(start_time, '%H:%M').time()
-            end_time_obj = datetime.strptime(end_time, '%H:%M').time()
-
-            # Создаем объект расписания и добавляем его в базу данных
-            schedule = Schedule(
-                operator_id=user_id,
-                color_id=color_id,
-                data=datetime.strptime(date, '%Y-%m-%d').date(),
-                startTime=start_time_obj,
-                endTime=end_time_obj
-            )
-            db.session.add(schedule)
-            db.session.commit()
-
-            return jsonify({'message': 'Расписание успешно добавлено'}), 200
-        except Exception as e:
-            print(f'Ошибка при добавлении расписания: {str(e)}')
-            db.session.rollback()
-            return jsonify({'error': 'Произошла ошибка при добавлении расписания'}), 500
-
-@user.route('api/delete_schedule/<int:id>', methods=['DELETE'])
-def get_delete_schedule(event_id):
-    try:
-        this_schedule = Schedule.query.get(event_id)
-        if this_schedule is None:
-            return jsonify({'error': 'Not found'}), 404
-        
-        db.session.delete(this_schedule)
-        db.session.commit()
-        return jsonify({'message': 'ok'}), 200
-    except:
-        db.session.rollback()
-        return jsonify({'error': 'При удалении статьи произошла ошибка'}), 500
-    
-"""
-
 # @user.route('/')
 # def main_index():
 #     user_list = db.session.execute(db.select(Users)).all()
@@ -261,86 +202,84 @@ def get_delete_schedule(event_id):
 #         data = pd.read_excel(file)
 #         print(data.head(6))
 #         print(data.tail(5))
-        
-#         user_in_block = ['Vizor', 'Vizor2', 'Администратор', 'Оператор1', 'super123']
 
 #         for i in range(4, len(data)):
 #             metrica = data.iloc[i, 0:19].tolist()
 #             # print("---")
 #             # print(f"Metrica: {metrica}")
             
-#             if metrica[1] not in user_in_block and isinstance(metrica[1], str):
-#                 SheetData = metrica[0]
+#             if isinstance(metrica[1], str):
+#                 # SheetData = metrica[0]
 
-#                 this_user = db.session.execute(db.select(Users.id, Users.name).filter(Users.name == metrica[1])).all()
+#                 this_user = db.session.execute(db.select(User.id, User.name).filter(User.name == metrica[1])).all()
 #                 if not this_user:
 #                     print(metrica[1])
-#                     new_operator = Users(name=metrica[1])
+#                     new_operator = User(name=metrica[1])
 #                     db.session.add(new_operator)
 #                     db.session.commit()
 #                     print("Successfully added new operator")
-#                     this_user = db.session.execute(db.select(Users.id, Users.name).filter(Users.name == metrica[1])).all()
-#                 operator_id = this_user[0].id   
+                    # this_user = db.session.execute(db.select(Users.id, Users.name).filter(Users.name == metrica[1])).all()
+                # operator_id = this_user[0].id   
                 
-#                 this_metrica = db.session.execute(db.select(Metrics).filter(Metrics.operator_id == operator_id).filter(Metrics.Data == SheetData)).all()
+                # this_metrica = db.session.execute(db.select(Metrics).filter(Metrics.operator_id == operator_id).filter(Metrics.Data == SheetData)).all()
                 
-#                 if not this_metrica:
+                # if not this_metrica:
                     
-#                     StatusTimeInPlace = datetime.strptime(metrica[2], '%H:%M:%S').time()
-#                     StatusTimeBusy = datetime.strptime(metrica[3], '%H:%M:%S').time()
-#                     StatusTimeBreak = datetime.strptime(metrica[4], '%H:%M:%S').time()
-#                     StatusTimeGone = datetime.strptime(metrica[5], '%H:%M:%S').time()
-#                     StatusTimeNotAvailable = datetime.strptime(metrica[6], '%H:%M:%S').time()
+                #     StatusTimeInPlace = datetime.strptime(metrica[2], '%H:%M:%S').time()
+                #     StatusTimeBusy = datetime.strptime(metrica[3], '%H:%M:%S').time()
+                #     StatusTimeBreak = datetime.strptime(metrica[4], '%H:%M:%S').time()
+                #     StatusTimeGone = datetime.strptime(metrica[5], '%H:%M:%S').time()
+                #     StatusTimeNotAvailable = datetime.strptime(metrica[6], '%H:%M:%S').time()
                     
-#                     PercentInPlace = metrica[7]
+                #     PercentInPlace = metrica[7]
                     
-#                     if isinstance(metrica[9], int): 
-#                         CountIncoming = metrica[9] 
-#                     else: 
-#                         CountIncoming = 0
+                #     if isinstance(metrica[9], int): 
+                #         CountIncoming = metrica[9] 
+                #     else: 
+                #         CountIncoming = 0
                     
-#                     if isinstance(metrica[10], str): 
-#                         LenghtIncoming = datetime.strptime(metrica[10], '%H:%M:%S').time()
-#                     else: 
-#                         LenghtIncoming = time(00, 00, 00)
+                #     if isinstance(metrica[10], str): 
+                #         LenghtIncoming = datetime.strptime(metrica[10], '%H:%M:%S').time()
+                #     else: 
+                #         LenghtIncoming = time(00, 00, 00)
                         
-#                     if isinstance(metrica[11], str): 
-#                         IncomingAVG = datetime.strptime(metrica[11], '%H:%M:%S').time()
-#                     else: 
-#                         IncomingAVG = time(00, 00, 00)
+                #     if isinstance(metrica[11], str): 
+                #         IncomingAVG = datetime.strptime(metrica[11], '%H:%M:%S').time()
+                #     else: 
+                #         IncomingAVG = time(00, 00, 00)
                         
-#                     if isinstance(metrica[12], int): 
-#                         CountOutgoing = metrica[12] 
-#                     else: 
-#                         CountOutgoing = 0
+                #     if isinstance(metrica[12], int): 
+                #         CountOutgoing = metrica[12] 
+                #     else: 
+                #         CountOutgoing = 0
                         
-#                     if isinstance(metrica[13], str): 
-#                         LenghtOutgoing = datetime.strptime(metrica[13], '%H:%M:%S').time()
-#                     else: 
-#                         LenghtOutgoing = time(00, 00, 00)
+                #     if isinstance(metrica[13], str): 
+                #         LenghtOutgoing = datetime.strptime(metrica[13], '%H:%M:%S').time()
+                #     else: 
+                #         LenghtOutgoing = time(00, 00, 00)
                     
-#                     if isinstance(metrica[14], str): 
-#                         OutgoingAVG = datetime.strptime(metrica[14], '%H:%M:%S').time()
-#                     else: 
-#                         OutgoingAVG = time(00, 00, 00)
+                #     if isinstance(metrica[14], str): 
+                #         OutgoingAVG = datetime.strptime(metrica[14], '%H:%M:%S').time()
+                #     else: 
+                #         OutgoingAVG = time(00, 00, 00)
                         
-#                     if isinstance(metrica[15], int): 
-#                         CountMissed = metrica[15] 
-#                     else: 
-#                         CountMissed = 0
+                #     if isinstance(metrica[15], int): 
+                #         CountMissed = metrica[15] 
+                #     else: 
+                #         CountMissed = 0
                     
-#                     NewMetrica = Metrics(Data=SheetData, operator_id=operator_id, StatusTimeInPlace=StatusTimeInPlace, StatusTimeBusy=StatusTimeBusy, StatusTimeBreak=StatusTimeBreak,
-#                                         StatusTimeGone=StatusTimeGone, StatusTimeNotAvailable=StatusTimeNotAvailable, PercentInPlace=PercentInPlace, CountIncoming=CountIncoming,
-#                                         LenghtIncoming=LenghtIncoming, IncomingAVG=IncomingAVG, CountOutgoing=CountOutgoing, LenghtOutgoing=LenghtOutgoing, OutgoingAVG=OutgoingAVG,
-#                                         CountMissed=CountMissed)
-#                     # print(NewMetrica)
-#                     db.session.add(NewMetrica)
-#                     db.session.commit()
-#                     print('Экземпляр модели Metrics был успешно добавлен в базу данных')
-#                 else:
-#                     print('Экземпляр модели Metrics уже существует')
+                #     NewMetrica = Metrics(Data=SheetData, operator_id=operator_id, StatusTimeInPlace=StatusTimeInPlace, StatusTimeBusy=StatusTimeBusy, StatusTimeBreak=StatusTimeBreak,
+                #                         StatusTimeGone=StatusTimeGone, StatusTimeNotAvailable=StatusTimeNotAvailable, PercentInPlace=PercentInPlace, CountIncoming=CountIncoming,
+                #                         LenghtIncoming=LenghtIncoming, IncomingAVG=IncomingAVG, CountOutgoing=CountOutgoing, LenghtOutgoing=LenghtOutgoing, OutgoingAVG=OutgoingAVG,
+                #                         CountMissed=CountMissed)
+                #     # print(NewMetrica)
+                #     db.session.add(NewMetrica)
+                #     db.session.commit()
+                #     print('Экземпляр модели Metrics был успешно добавлен в базу данных')
+                # else:
+                #     print('Экземпляр модели Metrics уже существует')
             
-#         return render_template('User/data.html', data=data.to_dict())
+        # return render_template('User/data.html', data=data.to_dict())
     
     
 # @user.route('/load_schedules')
